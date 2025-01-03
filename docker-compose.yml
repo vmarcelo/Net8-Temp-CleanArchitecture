@@ -1,0 +1,54 @@
+services:
+  keycloak-srv:
+    image: quay.io/keycloak/keycloak:26.0.7  # Usamos la versión actualizada de Keycloak
+    command: start-dev
+    container_name: keycloak-srv
+    environment:
+      - KC_DB=mssql
+      - KC_DB_URL=jdbc:sqlserver://keycloak-db:1433;databaseName=keycloak;encrypt=false;trustServerCertificate=true
+      - KC_DB_USERNAME=sa
+      - KC_DB_PASSWORD=EC1admin
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_DB_DATABASE=keycloak  # Nombre de la base de datos
+    ports:
+      - 14000:8080  # Puerto de Keycloak expuesto
+    depends_on:
+      keycloak-db:  # Keycloak depende de que la base de datos esté disponible
+        condition: service_healthy    
+    networks:
+      - keycloak_network
+
+  keycloak-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest  # Imagen de SQL Server
+    container_name: keycloak-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=EC1admin  # Contraseña para el usuario 'sa'
+      - MSSQL_PID=Developer
+    healthcheck:
+      test: ["CMD-SHELL", "if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P EC1admin -Q 'SELECT 1' -C; elif [ -f /opt/mssql-tools/bin/sqlcmd ]; then /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P EC1admin -Q 'SELECT 1'; else exit 1; fi"]
+      interval: 10s         # Intervalo entre cada intento de healthcheck
+      timeout: 10s          # Tiempo máximo para la respuesta de la BD
+      retries: 3            # Número de intentos antes de marcarlo como no saludable
+      start_period: 10s     # Tiempo antes de comenzar a chequear la salud
+    ports:
+      - 1434:1433  # Exponemos el puerto de SQL Server
+    networks:
+      - keycloak_network
+    command: >
+      /bin/bash -c "
+      /opt/mssql/bin/sqlservr & 
+      sleep 30;
+      until /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'EC1admin' -Q 'SELECT 1' > /dev/null 2>&1; do 
+        echo 'Esperando a que SQL Server se inicie...';
+        sleep 5;
+      done;
+      echo 'SQL Server iniciado, creando base de datos si no existe...';
+      /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'EC1admin' -Q \"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'keycloak') CREATE DATABASE keycloak\";
+      tail -f /dev/null;
+      "
+
+networks:
+  keycloak_network:
+    driver: bridge

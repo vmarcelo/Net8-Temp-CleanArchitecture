@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="microsoft.entityframeworkcore.tools" Version="9.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlatFinder.Application\FlatFinder.Application.csproj" />
+    <ProjectReference Include="..\FlatFinder.Contracts\FlatFinder.Contracts.csproj" />
+    <ProjectReference Include="..\FlatFinder.Infrastructure\FlatFinder.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
